@@ -12,16 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
         python-version: '3.8'
         cache: 'pip'
 
     - name: Cache HF models
-      uses: actions/cache@v4
+      uses: actions/cache@v3
       with:
         path: ~/.cache/huggingface
         key: huggingface-${{ runner.os }}-${{ hashFiles('**/*.py') }}
@@ -41,12 +41,15 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y \
           build-essential \
-          libtinfo5 \
+          libtinfo6 \
+          libncurses6 \
           gcc-11 \
-          g++-11
+          g++-11 \
+          dkms
         wget https://developer.download.nvidia.com/compute/cuda/12.1.0/local_installers/cuda_12.1.0_530.30.02_linux.run
-        sudo sh cuda_12.1.0_530.30.02_linux.run --toolkit --silent
+        sudo sh cuda_12.1.0_530.30.02_linux.run --toolkit --silent --override
         echo "CUDA_PATH=/usr/local/cuda-12.1" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
         echo "/usr/local/cuda-12.1/bin" >> $GITHUB_PATH
         
     - name: Train model
@@ -55,7 +58,7 @@ jobs:
         python src/train.py
       
     - name: Upload model artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: trained-model
         path: models/final/ 
