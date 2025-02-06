@@ -9,10 +9,7 @@ on:
 
 jobs:
   train:
-    runs-on: ubuntu-latest
-    container: 
-      image: nvidia/cuda:12.1.0-base-ubuntu22.04
-      options: --gpus all
+    runs-on: [self-hosted, linux, gpu]
     
     steps:
     - uses: actions/checkout@v4
@@ -33,7 +30,6 @@ jobs:
 
     - name: Install dependencies
       run: |
-        apt-get update && apt-get install -y python3-pip
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
