@@ -9,19 +9,22 @@ on:
 
 jobs:
   train:
-    runs-on: ubuntu-latest-gpu
+    runs-on: ubuntu-latest
+    container: 
+      image: nvidia/cuda:12.1.0-base-ubuntu22.04
+      options: --gpus all
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
         python-version: '3.8'
         cache: 'pip'
 
     - name: Cache HF models
-      uses: actions/cache@v4
+      uses: actions/cache@v3
       with:
         path: ~/.cache/huggingface
         key: huggingface-${{ runner.os }}-${{ hashFiles('**/*.py') }}
@@ -30,47 +33,20 @@ jobs:
 
     - name: Install dependencies
       run: |
+        apt-get update && apt-get install -y python3-pip
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-
-    - name: Setup NVIDIA Container Toolkit
-      run: |
-        distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-        curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-        curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-        sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
-        sudo systemctl restart docker
-
-    - name: Setup CUDA
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository -y ppa:graphics-drivers/ppa
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          nvidia-driver-530 \
-          nvidia-cuda-toolkit \
-          libtinfo6 \
-          libncurses6 \
-          gcc-11 \
-          g++-11
-        echo "CUDA_PATH=/usr/local/cuda" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "/usr/local/cuda/bin" >> $GITHUB_PATH
         
     - name: Verify GPU setup
       run: |
         nvidia-smi
-        nvcc --version
         
     - name: Train model
       run: |
         python src/train.py
       
     - name: Upload model artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: trained-model
-        path: models/final/
-        compression-level: 6 
+        path: models/final/ 
