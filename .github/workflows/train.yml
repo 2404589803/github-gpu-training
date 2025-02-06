@@ -9,7 +9,7 @@ on:
 
 jobs:
   train:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-gpu
     
     steps:
     - uses: actions/checkout@v4
@@ -33,28 +33,39 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Setup NVIDIA Container Toolkit
+      run: |
+        distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+        curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+        curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+        sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+        sudo systemctl restart docker
+
     - name: Setup CUDA
       run: |
         sudo apt-get update
         sudo apt-get install -y software-properties-common
-        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo add-apt-repository -y ppa:graphics-drivers/ppa
         sudo apt-get update
         sudo apt-get install -y \
           build-essential \
+          nvidia-driver-530 \
+          nvidia-cuda-toolkit \
           libtinfo6 \
           libncurses6 \
           gcc-11 \
-          g++-11 \
-          dkms
-        wget https://developer.download.nvidia.com/compute/cuda/12.1.0/local_installers/cuda_12.1.0_530.30.02_linux.run
-        sudo sh cuda_12.1.0_530.30.02_linux.run --toolkit --silent --override
-        echo "CUDA_PATH=/usr/local/cuda-12.1" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "/usr/local/cuda-12.1/bin" >> $GITHUB_PATH
+          g++-11
+        echo "CUDA_PATH=/usr/local/cuda" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "/usr/local/cuda/bin" >> $GITHUB_PATH
+        
+    - name: Verify GPU setup
+      run: |
+        nvidia-smi
+        nvcc --version
         
     - name: Train model
       run: |
-        nvidia-smi
         python src/train.py
       
     - name: Upload model artifacts
